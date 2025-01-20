@@ -3,6 +3,8 @@ import 'package:ai_project/chart.dart';
 import 'package:ai_project/scan.dart';
 import 'package:flutter/material.dart';
 
+import 'Expense.dart';
+
 void main() => runApp(MoneyTrackerApp());
 
 class MoneyTrackerApp extends StatefulWidget {
@@ -18,13 +20,18 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
       _currentIndex = index;
     });
 
-    // Navigate to the appropriate page
-    if (index == 1) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => ScannerApp()));
-    } else if (index == 2) {
-      Navigator.push(
-          context, MaterialPageRoute(builder: (_) => ExpenseChartPage()));
-    }
+    // Use a Future.delayed to navigate after the current frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (index == 1) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => ScannerApp()),
+        );
+      } else if (index == 2) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => ExpenseChartPage()),
+        );
+      }
+    });
   }
 
   @override
@@ -46,22 +53,32 @@ class MoneyTrackerPage extends StatelessWidget {
   MoneyTrackerPage({required this.currentIndex, required this.onItemTapped});
 
   /// Fetches data from the database
-  Future<Map<String, dynamic>> fetchData() async {
+  Future<List<Expense>> fetchData() async {
     final apiService = ApiService(
       baseUrl:
-      'https://script.google.com/macros/s/AKfycbyYoxXPEZmgXIdS63wpKXpgQXkoyD1pf_jxAFCXbOALxsGi5ij6bnigsn_dSk3XeWaV/exec',
+      'https://script.google.com/macros/s/AKfycbyVFFW2gQIUmegll0Z28RFUSK9VJPBc3PLh09YvotVIzCmt7zaIPHsq4n0KAQ2jUHV6aQ/exec',
     );
     try {
-      final data = await apiService.get('');
-      // Check if the response is a list
-      if (data is List && data.isNotEmpty) {
-        return Map<String, dynamic>.from(data.first); // Return the first item
-      } else {
-        throw Exception('Unexpected data format or empty list');
-      }
+      final rawData = await apiService.get('');
+      print(rawData); // Debugging: Check the raw data structure
+
+      // Ensure rawData is treated as a List<dynamic>
+      final data = (rawData as List<dynamic>)
+          .map((item) {
+        // Each item is a List<dynamic> with a known structure
+        final list = item as List<dynamic>;
+        return Expense(
+          category: list[0] as String,
+          totalPrice: (list[1] as num).toDouble(), // Ensure double conversion
+          date: DateTime.parse(list[2] as String),
+        );
+      })
+          .toList();
+
+      return data;
     } catch (e) {
       print('Error fetching data: $e');
-      return {};
+      return [];
     }
   }
 
@@ -81,7 +98,7 @@ class MoneyTrackerPage extends StatelessWidget {
         title: Text("Money Tracker", style: TextStyle(color: Colors.black)),
         centerTitle: true,
       ),
-      body: FutureBuilder<Map<String, dynamic>>(
+      body: FutureBuilder<List<Expense>>(
         future: fetchData(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -92,10 +109,20 @@ class MoneyTrackerPage extends StatelessWidget {
             return Center(child: Text("No data available."));
           }
 
-          final data = snapshot.data!;
-          final category = data['category'] ?? 'Unknown';
-          final totalPrice = data['totalPrice'] ?? 0.0;
-          final date = data['date'] ?? 'Unknown';
+          final expenses = snapshot.data!;
+
+          // Group expenses by date
+          final groupedExpenses = <String, List<Expense>>{};
+          for (var expense in expenses) {
+            final dateKey = expense.date.toLocal().toString().split(' ')[0]; // Format as 'YYYY-MM-DD'
+            groupedExpenses.putIfAbsent(dateKey, () => []).add(expense);
+          }
+
+          // Calculate total expense
+          final totalExpense = expenses.fold<double>(
+            0.0,
+                (sum, expense) => sum + expense.totalPrice,
+          );
 
           return Column(
             children: [
@@ -106,22 +133,46 @@ class MoneyTrackerPage extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Expenses\n${totalPrice.toStringAsFixed(2)}",
-                        style: TextStyle(fontSize: 16, color: Colors.black)),
-                    Text("Income\n0",
-                        style: TextStyle(fontSize: 16, color: Colors.black)),
-                    Text("Balance\n${(-totalPrice).toStringAsFixed(2)}",
-                        style: TextStyle(fontSize: 16, color: Colors.black)),
+                    Text(
+                      "Expenses\n${totalExpense.toStringAsFixed(2)}",
+                      style: TextStyle(fontSize: 16, color: Colors.black),
+                    ),
+                    Text(
+                      "Income\n0",
+                      style: TextStyle(fontSize: 16, color: Colors.black),
+                    ),
+                    Text(
+                      "Balance\n${(-totalExpense).toStringAsFixed(2)}",
+                      style: TextStyle(fontSize: 16, color: Colors.black),
+                    ),
                   ],
                 ),
               ),
-              // Expense List
+
+              // Grouped List of Expenses
               Expanded(
-                child: ListView(
-                  children: [
-                    _buildDateHeader(date, totalPrice),
-                    _buildExpenseItem(category, "-${totalPrice.toStringAsFixed(2)}", "assets/icons/food.png"),
-                  ],
+                child: ListView.builder(
+                  itemCount: groupedExpenses.length,
+                  itemBuilder: (context, index) {
+                    final dateKey = groupedExpenses.keys.elementAt(index);
+                    final dateExpenses = groupedExpenses[dateKey]!;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Date Header
+                        _buildDateHeader(dateKey, 11),
+                        // List of Expenses for the Date
+                        ...dateExpenses.map(
+                              (expense) => _buildExpenseItem(
+                            expense.category,
+                            "-${expense.totalPrice.toStringAsFixed(2)}",
+                            "assets/icons/food.png", // Adjust icon as needed
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -131,7 +182,7 @@ class MoneyTrackerPage extends StatelessWidget {
       // Floating Action Button
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Add action for FAB
+          onItemTapped(2);
         },
         backgroundColor: Colors.yellow[700],
         child: Icon(Icons.add, color: Colors.white),
