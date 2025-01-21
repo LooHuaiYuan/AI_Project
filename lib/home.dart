@@ -2,7 +2,6 @@ import 'package:ai_project/ApiService.dart';
 import 'package:ai_project/chart.dart';
 import 'package:ai_project/scan.dart';
 import 'package:flutter/material.dart';
-
 import 'Expense.dart';
 
 void main() => runApp(MoneyTrackerApp());
@@ -39,48 +38,14 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: MoneyTrackerPage(
-        currentIndex: _currentIndex,
-        onItemTapped: _onItemTapped,
       ),
     );
   }
 }
 
 class MoneyTrackerPage extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onItemTapped;
 
-  MoneyTrackerPage({required this.currentIndex, required this.onItemTapped});
-
-  /// Fetches data from the database
-  Future<List<Expense>> fetchData() async {
-    final apiService = ApiService(
-      baseUrl:
-      'https://script.google.com/macros/s/AKfycbyVFFW2gQIUmegll0Z28RFUSK9VJPBc3PLh09YvotVIzCmt7zaIPHsq4n0KAQ2jUHV6aQ/exec',
-    );
-    try {
-      final rawData = await apiService.get('');
-      print(rawData); // Debugging: Check the raw data structure
-
-      // Ensure rawData is treated as a List<dynamic>
-      final data = (rawData as List<dynamic>)
-          .map((item) {
-        // Each item is a List<dynamic> with a known structure
-        final list = item as List<dynamic>;
-        return Expense(
-          category: list[0] as String,
-          totalPrice: (list[1] as num).toDouble(), // Ensure double conversion
-          date: DateTime.parse(list[2] as String),
-        );
-      })
-          .toList();
-
-      return data;
-    } catch (e) {
-      print('Error fetching data: $e');
-      return [];
-    }
-  }
+  ApiService api = new ApiService(baseUrl: "https://script.google.com/macros/s/AKfycbyVFFW2gQIUmegll0Z28RFUSK9VJPBc3PLh09YvotVIzCmt7zaIPHsq4n0KAQ2jUHV6aQ/exec");
 
   /// Calculates the total expenses from the fetched data
   double calculateTotalExpense(List<dynamic> items) {
@@ -99,7 +64,7 @@ class MoneyTrackerPage extends StatelessWidget {
         centerTitle: true,
       ),
       body: FutureBuilder<List<Expense>>(
-        future: fetchData(),
+        future: api.fetchData(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -111,11 +76,13 @@ class MoneyTrackerPage extends StatelessWidget {
 
           final expenses = snapshot.data!;
 
-          // Group expenses by date
+          // Group expenses by date and calculate daily totals
           final groupedExpenses = <String, List<Expense>>{};
+          final dailyTotals = <String, double>{};
           for (var expense in expenses) {
             final dateKey = expense.date.toLocal().toString().split(' ')[0]; // Format as 'YYYY-MM-DD'
             groupedExpenses.putIfAbsent(dateKey, () => []).add(expense);
+            dailyTotals[dateKey] = (dailyTotals[dateKey] ?? 0) + expense.totalPrice;
           }
 
           // Calculate total expense
@@ -156,18 +123,20 @@ class MoneyTrackerPage extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final dateKey = groupedExpenses.keys.elementAt(index);
                     final dateExpenses = groupedExpenses[dateKey]!;
+                    final dailyTotal = dailyTotals[dateKey]!;
+
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Date Header
-                        _buildDateHeader(dateKey, 11),
+                        _buildDateHeaderWithTotal(dateKey, dailyTotal),
                         // List of Expenses for the Date
                         ...dateExpenses.map(
                               (expense) => _buildExpenseItem(
                             expense.category,
                             "-${expense.totalPrice.toStringAsFixed(2)}",
-                            "assets/icons/food.png", // Adjust icon as needed
+                            "assets/icons/${expense.category}.png", // Adjust icon as needed
                           ),
                         ),
                       ],
@@ -180,48 +149,43 @@ class MoneyTrackerPage extends StatelessWidget {
         },
       ),
       // Floating Action Button
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          onItemTapped(2);
-        },
-        backgroundColor: Colors.yellow[700],
-        child: Icon(Icons.add, color: Colors.white),
-      ),
-      // Bottom Navigation Bar
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: onItemTapped,
-        selectedItemColor: Colors.yellow[700],
-        unselectedItemColor: Colors.grey,
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: "Records"),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: ""), // Placeholder for FAB
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: "Reports"),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
-  Widget _buildDateHeader(String date, double expenses) {
+  Widget _buildDateHeaderWithTotal(String date, double dailyTotal) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("$date", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          Text("Expenses: $expenses", style: TextStyle(fontSize: 14, color: Colors.grey)),
+          Text(
+            "Date: $date",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          Text(
+            "Total: ${dailyTotal.toStringAsFixed(2)}",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
         ],
       ),
     );
   }
 
+
   Widget _buildExpenseItem(String category, String amount, String iconPath) {
+    var width = 48.0;
+    var height = 48.0;
+    if(category == "Entertainment"){
+      width = 28;
+      height = 28;
+    }
     return ListTile(
       leading: CircleAvatar(
         radius: 24,
         backgroundColor: Colors.pink[100],
-        child: Image.asset('assets/icons/food.png', width: 48, height: 48), // Add your local icon assets
+        child: Image.asset('assets/icons/$category.png',
+            width: width, height: height
+        ), // Add your local icon assets
       ),
       title: Text(category, style: TextStyle(fontSize: 16)),
       trailing: Text(amount, style: TextStyle(fontSize: 16, color: Colors.red)),
