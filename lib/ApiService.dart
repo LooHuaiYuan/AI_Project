@@ -1,6 +1,8 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'Expense.dart';
+
 class ApiService {
   final String baseUrl; // Base URL of the API
 
@@ -41,4 +43,31 @@ class ApiService {
       throw Exception('Error during POST request: $e');
     }
   }
+
+  /// Fetches data from the database
+  Future<List<Expense>> fetchData() async {
+    try {
+      final rawData = await get('');
+      print(rawData); // Debugging: Check the raw data structure
+
+      // Ensure rawData is treated as a List<dynamic>
+      final data = (rawData as List<dynamic>)
+          .map((item) {
+        // Each item is a List<dynamic> with a known structure
+        final list = item as List<dynamic>;
+        return Expense(
+          category: list[0] as String,
+          totalPrice: (list[1] as num).toDouble(), // Ensure double conversion
+          date: DateTime.parse(list[2] as String),
+        );
+      })
+          .toList();
+
+      return data;
+    } catch (e) {
+      print('Error fetching data: $e');
+      return [];
+    }
+  }
+
 }

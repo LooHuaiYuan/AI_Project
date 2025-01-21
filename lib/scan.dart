@@ -50,10 +50,7 @@ class _QRCodeScannerPageState extends State<QRCodeScannerPage> {
       appBar: AppBar(
         backgroundColor: Colors.blue,
         title: Text("Scan", style: TextStyle(color: Colors.white)),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        centerTitle: true,
       ),
       body: Column(
         children: [

@@ -1,7 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-class ExpenseChartPage extends StatelessWidget {
+import 'ApiService.dart';
+import 'Expense.dart';
+
+class ExpenseChartPage extends StatefulWidget {
+  @override
+  State<ExpenseChartPage> createState() => _ExpenseChartPageState();
+}
+
+class _ExpenseChartPageState extends State<ExpenseChartPage> {
+  ApiService api = ApiService(
+    baseUrl:
+    "https://script.google.com/macros/s/AKfycbyVFFW2gQIUmegll0Z28RFUSK9VJPBc3PLh09YvotVIzCmt7zaIPHsq4n0KAQ2jUHV6aQ/exec",
+  );
+
+  Map<String, double> calculateCategoryTotals(List<Expense> expenses) {
+    final categoryTotals = <String, double>{};
+    for (var expense in expenses) {
+      categoryTotals[expense.category] =
+          (categoryTotals[expense.category] ?? 0) + expense.totalPrice;
+    }
+    return categoryTotals;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -10,39 +32,60 @@ class ExpenseChartPage extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.yellow[700],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Expense Breakdown',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            Expanded(
-              child: PieChart(
-                PieChartData(
-                  sections: _createChartSections(),
-                  centerSpaceRadius: 40,
-                  sectionsSpace: 4,
+      body: FutureBuilder<List<Expense>>(
+        future: api.fetchData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text("No data available."));
+          }
+
+          final expenses = snapshot.data!;
+          final categoryTotals = calculateCategoryTotals(expenses);
+
+          // Calculate total expenses and percentages
+          final totalExpenses = categoryTotals.values.fold(0.0, (sum, value) => sum + value);
+          final chartSections = _createChartSections(categoryTotals, totalExpenses);
+
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Expense Breakdown',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
+                SizedBox(height: 16),
+                Expanded(
+                  child: PieChart(
+                    PieChartData(
+                      sections: chartSections,
+                      centerSpaceRadius: 40,
+                      sectionsSpace: 4,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: categoryTotals.length,
+                    itemBuilder: (context, index) {
+                      final category = categoryTotals.keys.elementAt(index);
+                      final total = categoryTotals[category]!;
+                      final percentage = (total / totalExpenses) * 100;
+
+                      return _buildCategoryRow(category, percentage, total, _getCategoryColor(index));
+                    },
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 16),
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildCategoryRow('Food', 71.52, 343.55, Colors.yellow),
-                  _buildCategoryRow('Entertainment', 11.83, 56.85, Colors.red),
-                  _buildCategoryRow('Shopping', 8.16, 39.20, Colors.blue),
-                  _buildCategoryRow('Home', 6.86, 33.00, Colors.green),
-                  _buildCategoryRow('Transportation', 1.61, 7.75, Colors.purple),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -70,45 +113,33 @@ class ExpenseChartPage extends StatelessWidget {
     );
   }
 
-  List<PieChartSectionData> _createChartSections() {
-    return [
-      PieChartSectionData(
-        color: Colors.yellow,
-        value: 71.52,
-        title: '71.5%',
+  List<PieChartSectionData> _createChartSections(Map<String, double> categoryTotals, double totalExpenses) {
+    final colors = [Colors.yellow, Colors.red, Colors.blue, Colors.green, Colors.purple];
+
+    return categoryTotals.entries.mapIndexed((index, entry) {
+      final double? value = double.tryParse(entry.value.toString()); // Ensure value is explicitly a double
+      final percentage = (value! / totalExpenses) * 100;
+
+      return PieChartSectionData(
+        color: colors[index % colors.length],
+        value: percentage,
+        title: '${percentage.toStringAsFixed(1)}%',
         titleStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
-      ),
-      PieChartSectionData(
-        color: Colors.red,
-        value: 11.83,
-        title: '11.8%',
-        titleStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        color: Colors.blue,
-        value: 8.16,
-        title: '8.2%',
-        titleStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        color: Colors.green,
-        value: 6.86,
-        title: '6.9%',
-        titleStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        color: Colors.purple,
-        value: 1.61,
-        title: '1.6%',
-        titleStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-    ];
+      );
+    }).toList();
+  }
+
+
+  Color _getCategoryColor(int index) {
+    final colors = [Colors.yellow, Colors.red, Colors.blue, Colors.green, Colors.purple];
+    return colors[index % colors.length];
   }
 }
 
-void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: ExpenseChartPage(),
-  ));
+extension MapIndexed<K, V> on Iterable<MapEntry<K, V>> {
+  List<T> mapIndexed<T>(T Function(int index, MapEntry<K, V> entry) f) {
+    var index = 0;
+    return map((e) => f(index++, e)).toList();
+  }
 }
+
