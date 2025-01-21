@@ -4,9 +4,8 @@ import 'dart:convert';
 import 'Expense.dart';
 
 class ApiService {
-  final String baseUrl; // Base URL of the API
+  String baseUrl="https://script.google.com/macros/s/AKfycbzmjgYgpeTVGub7qjA5F8zemdiUjEKKqhQdMko1esQCxZXJ8DyUz_fkr1IyE_anZKpRgQ/exec"; // Base URL of the API
 
-  ApiService({required this.baseUrl});
 
   /// Generic GET Request
   Future<dynamic> get(String endpoint) async {

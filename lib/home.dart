@@ -45,8 +45,7 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
 
 class MoneyTrackerPage extends StatelessWidget {
 
-  ApiService api = new ApiService(baseUrl: "https://script.google.com/macros/s/AKfycbyVFFW2gQIUmegll0Z28RFUSK9VJPBc3PLh09YvotVIzCmt7zaIPHsq4n0KAQ2jUHV6aQ/exec");
-
+  ApiService api = ApiService();
   /// Calculates the total expenses from the fetched data
   double calculateTotalExpense(List<dynamic> items) {
     return items.fold<double>(
@@ -57,6 +56,7 @@ class MoneyTrackerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("this is run");
 
     return Scaffold(
       appBar: AppBar(
