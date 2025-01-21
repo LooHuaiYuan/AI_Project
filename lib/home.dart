@@ -57,6 +57,7 @@ class MoneyTrackerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.yellow[700],
@@ -175,9 +176,12 @@ class MoneyTrackerPage extends StatelessWidget {
   Widget _buildExpenseItem(String category, String amount, String iconPath) {
     var width = 48.0;
     var height = 48.0;
-    if(category == "Entertainment"){
+    if(category == "Entertainment" ){
       width = 28;
       height = 28;
+    }else if(category == "Transportation"){
+      width = 36;
+      height = 36;
     }
     return ListTile(
       leading: CircleAvatar(

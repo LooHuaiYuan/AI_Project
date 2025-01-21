@@ -24,8 +24,8 @@ class ApiService {
   }
 
   /// Generic POST Request
-  Future<dynamic> post(String endpoint, Map<String, dynamic> body) async {
-    final url = Uri.parse('$baseUrl$endpoint');
+  Future<dynamic> post(Map<String, dynamic> body) async {
+    final url = Uri.parse('$baseUrl');
     try {
       final response = await http.post(
         url,
@@ -67,6 +67,30 @@ class ApiService {
     } catch (e) {
       print('Error fetching data: $e');
       return [];
+    }
+  }
+
+  /// Posts an expense to the database
+  void postData(Expense expense) async {
+    try {
+      // Prepare the request body
+      final body = {
+        'category': expense.category,
+        'totalPrice': expense.totalPrice,
+        'date': expense.date.toIso8601String(), // Convert DateTime to String
+      };
+
+      // Make the POST request
+      final response = await post(body);
+      if (response.statusCode == 302) {
+        // Handle response (assuming a successful POST returns a confirmation message or status)
+        print('POST response: $response'); // Debugging: Check the response
+      } else {
+        throw Exception('Failed to POST data. Status code: ${response.statusCode}');
+      }
+
+    } catch (e) {
+      print('Error posting data: $e');
     }
   }
 
