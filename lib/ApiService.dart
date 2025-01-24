@@ -4,9 +4,12 @@ import 'dart:convert';
 import 'Expense.dart';
 
 class ApiService {
+<<<<<<< HEAD
   final String baseUrl; // Base URL of the API
+=======
+  String baseUrl="https://script.google.com/macros/s/AKfycbzmjgYgpeTVGub7qjA5F8zemdiUjEKKqhQdMko1esQCxZXJ8DyUz_fkr1IyE_anZKpRgQ/exec"; // Base URL of the API
+>>>>>>> 3b35ddbcc9b62904d8715cf177676bfdeb822bf3
 
-  ApiService({required this.baseUrl});
 
   /// Generic GET Request
   Future<dynamic> get(String endpoint) async {
@@ -24,8 +27,8 @@ class ApiService {
   }
 
   /// Generic POST Request
-  Future<dynamic> post(String endpoint, Map<String, dynamic> body) async {
-    final url = Uri.parse('$baseUrl$endpoint');
+  Future<dynamic> post(Map<String, dynamic> body) async {
+    final url = Uri.parse('$baseUrl');
     try {
       final response = await http.post(
         url,
@@ -70,4 +73,31 @@ class ApiService {
     }
   }
 
+<<<<<<< HEAD
+=======
+  /// Posts an expense to the database
+  void postData(Expense expense) async {
+    try {
+      // Prepare the request body
+      final body = {
+        'category': expense.category,
+        'totalPrice': expense.totalPrice,
+        'date': expense.date.toIso8601String(), // Convert DateTime to String
+      };
+
+      // Make the POST request
+      final response = await post(body);
+      if (response.statusCode == 302) {
+        // Handle response (assuming a successful POST returns a confirmation message or status)
+        print('POST response: $response'); // Debugging: Check the response
+      } else {
+        throw Exception('Failed to POST data. Status code: ${response.statusCode}');
+      }
+
+    } catch (e) {
+      print('Error posting data: $e');
+    }
+  }
+
+>>>>>>> 3b35ddbcc9b62904d8715cf177676bfdeb822bf3
 }

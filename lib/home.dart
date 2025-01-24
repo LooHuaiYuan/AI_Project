@@ -44,9 +44,13 @@ class _MoneyTrackerAppState extends State<MoneyTrackerApp> {
 }
 
 class MoneyTrackerPage extends StatelessWidget {
+<<<<<<< HEAD
 
   ApiService api = new ApiService(baseUrl: "https://script.google.com/macros/s/AKfycbyVFFW2gQIUmegll0Z28RFUSK9VJPBc3PLh09YvotVIzCmt7zaIPHsq4n0KAQ2jUHV6aQ/exec");
+=======
+>>>>>>> 3b35ddbcc9b62904d8715cf177676bfdeb822bf3
 
+  ApiService api = ApiService();
   /// Calculates the total expenses from the fetched data
   double calculateTotalExpense(List<dynamic> items) {
     return items.fold<double>(
@@ -57,6 +61,8 @@ class MoneyTrackerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("this is run");
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.yellow[700],
@@ -175,9 +181,18 @@ class MoneyTrackerPage extends StatelessWidget {
   Widget _buildExpenseItem(String category, String amount, String iconPath) {
     var width = 48.0;
     var height = 48.0;
+<<<<<<< HEAD
     if(category == "Entertainment"){
       width = 28;
       height = 28;
+=======
+    if(category == "Entertainment" ){
+      width = 28;
+      height = 28;
+    }else if(category == "Transportation"){
+      width = 36;
+      height = 36;
+>>>>>>> 3b35ddbcc9b62904d8715cf177676bfdeb822bf3
     }
     return ListTile(
       leading: CircleAvatar(

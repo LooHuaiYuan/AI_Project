@@ -10,10 +10,14 @@ class ExpenseChartPage extends StatefulWidget {
 }
 
 class _ExpenseChartPageState extends State<ExpenseChartPage> {
+<<<<<<< HEAD
   ApiService api = ApiService(
     baseUrl:
     "https://script.google.com/macros/s/AKfycbyVFFW2gQIUmegll0Z28RFUSK9VJPBc3PLh09YvotVIzCmt7zaIPHsq4n0KAQ2jUHV6aQ/exec",
   );
+=======
+  ApiService api = ApiService();
+>>>>>>> 3b35ddbcc9b62904d8715cf177676bfdeb822bf3
 
   Map<String, double> calculateCategoryTotals(List<Expense> expenses) {
     final categoryTotals = <String, double>{};
